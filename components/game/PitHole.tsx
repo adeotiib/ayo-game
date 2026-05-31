@@ -18,7 +18,9 @@ export function PitHole({ seeds, isStore, isClickable, isCapturing, position, on
   const [hovered, setHovered] = useState(false);
   const glowRef = useRef<THREE.Mesh>(null);
 
-  const r = isStore ? 0.52 : 0.36;
+  const r = isStore ? 0.52 : 0.355;
+  const wallH = isStore ? 0.24 : 0.22;   // cylinder height above board surface
+  const rBot = r * 0.72;                   // narrower at bottom = bowl taper
 
   useFrame((_, dt) => {
     if (!glowRef.current) return;
@@ -31,36 +33,44 @@ export function PitHole({ seeds, isStore, isClickable, isCapturing, position, on
     <group
       position={position}
       onClick={(e) => { e.stopPropagation(); if (isClickable) onSelect(); }}
-      onPointerEnter={() => {
-        setHovered(true);
-        if (isClickable) document.body.style.cursor = 'pointer';
-      }}
-      onPointerLeave={() => {
-        setHovered(false);
-        document.body.style.cursor = 'default';
-      }}
+      onPointerEnter={() => { setHovered(true); if (isClickable) document.body.style.cursor = 'pointer'; }}
+      onPointerLeave={() => { setHovered(false); document.body.style.cursor = 'default'; }}
     >
-      {/* Outer raised rim */}
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.01, 0]} receiveShadow>
-        <ringGeometry args={[r * 0.82, r + 0.05, 40]} />
-        <meshStandardMaterial color="#7B4200" roughness={0.6} metalness={0.15} />
+      {/*
+       * Hollow-pit trick:
+       * A cylinder sits ON the board surface (not below it), rendered BackSide.
+       * • The outer wall is invisible (BackSide skips front faces).
+       * • The inner wall IS visible from above → looks like a dark hole.
+       * A dark disc plugs the bottom so you don't see the board through it.
+       * The rim ring is a flat ring at the very top, sitting proud on the board.
+       */}
+
+      {/* Dark floor — just a hair above the board surface to avoid z-fight */}
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.003, 0]}>
+        <circleGeometry args={[rBot + 0.01, 40]} />
+        <meshStandardMaterial color="#060100" roughness={1} />
       </mesh>
 
-      {/* Dark pit interior */}
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0]} receiveShadow>
-        <circleGeometry args={[r * 0.82, 40]} />
-        <meshStandardMaterial color="#110400" roughness={0.95} />
+      {/* Hollow bowl walls — open at top, tapered toward bottom */}
+      <mesh position={[0, wallH / 2, 0]}>
+        <cylinderGeometry args={[r, rBot, wallH, 40, 3, true]} />
+        <meshStandardMaterial
+          color="#230A00"
+          side={THREE.BackSide}
+          roughness={0.93}
+          metalness={0.0}
+        />
       </mesh>
 
-      {/* Inner shadow ring for depth */}
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.005, 0]}>
-        <ringGeometry args={[r * 0.6, r * 0.82, 40]} />
-        <meshStandardMaterial color="#2A0B00" roughness={0.9} />
+      {/* Outer rim ring — sits at the top of the bowl, proud of the board */}
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, wallH + 0.008, 0]}>
+        <ringGeometry args={[r, r + 0.07, 40]} />
+        <meshStandardMaterial color="#8B5200" roughness={0.55} metalness={0.18} />
       </mesh>
 
-      {/* Glow ring (hover / capture) */}
-      <mesh ref={glowRef} rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.015, 0]}>
-        <ringGeometry args={[r + 0.03, r + 0.1, 40]} />
+      {/* Gold/red glow around rim on hover or capture */}
+      <mesh ref={glowRef} rotation={[-Math.PI / 2, 0, 0]} position={[0, wallH + 0.016, 0]}>
+        <ringGeometry args={[r + 0.05, r + 0.14, 40]} />
         <meshBasicMaterial
           color={isCapturing ? '#FF4500' : '#FFD700'}
           transparent
@@ -68,14 +78,14 @@ export function PitHole({ seeds, isStore, isClickable, isCapturing, position, on
         />
       </mesh>
 
-      {/* Seeds sit inside the pit */}
-      <group position={[0, 0.02, 0]}>
-        <SeedCluster count={seeds} radius={r * 0.72} />
+      {/* Seeds sit partway up inside the bowl */}
+      <group position={[0, wallH * 0.18, 0]}>
+        <SeedCluster count={seeds} radius={rBot * 0.88} />
       </group>
 
-      {/* Invisible larger click zone */}
+      {/* Invisible wider click zone */}
       <mesh visible={false}>
-        <cylinderGeometry args={[r + 0.15, r + 0.15, 0.3, 16]} />
+        <cylinderGeometry args={[r + 0.15, r + 0.15, 0.4, 16]} />
         <meshBasicMaterial />
       </mesh>
     </group>

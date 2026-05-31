@@ -85,8 +85,8 @@ function HandModel({ color, glowColor, isGrabbing }: HandModelProps) {
 }
 
 const IDLE_POS: Record<Player, THREE.Vector3> = {
-  1: new THREE.Vector3(0, 1.1, 2.2),
-  2: new THREE.Vector3(0, 1.1, -2.2),
+  1: new THREE.Vector3(0, 1.2, 1.1),
+  2: new THREE.Vector3(0, 1.2, -1.1),
 };
 
 export function PlayerHand({ player }: { player: Player }) {

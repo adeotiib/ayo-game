@@ -16,53 +16,68 @@ interface Props {
 
 export function PitHole({ seeds, isStore, isClickable, isCapturing, position, onSelect }: Props) {
   const [hovered, setHovered] = useState(false);
-  const ringRef = useRef<THREE.Mesh>(null);
+  const glowRef = useRef<THREE.Mesh>(null);
 
-  const radius = isStore ? 0.48 : 0.33;
-  const depth = isStore ? 0.4 : 0.28;
+  const r = isStore ? 0.52 : 0.36;
 
   useFrame((_, dt) => {
-    if (!ringRef.current) return;
-    const target = (hovered && isClickable) ? 1 : isCapturing ? 1.5 : 0;
-    (ringRef.current.material as THREE.MeshBasicMaterial).opacity +=
-      (target - (ringRef.current.material as THREE.MeshBasicMaterial).opacity) * Math.min(1, dt * 10);
+    if (!glowRef.current) return;
+    const mat = glowRef.current.material as THREE.MeshBasicMaterial;
+    const want = isCapturing ? 1 : (hovered && isClickable) ? 0.85 : 0;
+    mat.opacity += (want - mat.opacity) * Math.min(1, dt * 12);
   });
 
   return (
     <group
       position={position}
       onClick={(e) => { e.stopPropagation(); if (isClickable) onSelect(); }}
-      onPointerEnter={() => setHovered(true)}
-      onPointerLeave={() => setHovered(false)}
+      onPointerEnter={() => {
+        setHovered(true);
+        if (isClickable) document.body.style.cursor = 'pointer';
+      }}
+      onPointerLeave={() => {
+        setHovered(false);
+        document.body.style.cursor = 'default';
+      }}
     >
-      {/* Bowl shell (outer) */}
-      <mesh receiveShadow rotation={[Math.PI / 2, 0, 0]}>
-        <cylinderGeometry args={[radius, radius * 0.75, depth, 24, 1, true]} />
-        <meshStandardMaterial color="#2A0F00" side={THREE.BackSide} roughness={0.9} />
+      {/* Outer raised rim */}
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.01, 0]} receiveShadow>
+        <ringGeometry args={[r * 0.82, r + 0.05, 40]} />
+        <meshStandardMaterial color="#7B4200" roughness={0.6} metalness={0.15} />
       </mesh>
 
-      {/* Rim ring */}
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.01, 0]}>
-        <ringGeometry args={[radius - 0.01, radius + 0.04, 32]} />
-        <meshStandardMaterial color="#5A3000" roughness={0.6} metalness={0.2} />
+      {/* Dark pit interior */}
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0]} receiveShadow>
+        <circleGeometry args={[r * 0.82, 40]} />
+        <meshStandardMaterial color="#110400" roughness={0.95} />
       </mesh>
 
-      {/* Gold highlight ring */}
-      <mesh ref={ringRef} rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.02, 0]}>
-        <ringGeometry args={[radius + 0.04, radius + 0.1, 32]} />
-        <meshBasicMaterial color={isCapturing ? '#FF4500' : '#FFD700'} transparent opacity={0} />
+      {/* Inner shadow ring for depth */}
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.005, 0]}>
+        <ringGeometry args={[r * 0.6, r * 0.82, 40]} />
+        <meshStandardMaterial color="#2A0B00" roughness={0.9} />
       </mesh>
 
-      {/* Seeds */}
-      <SeedCluster count={seeds} radius={radius * 0.85} />
+      {/* Glow ring (hover / capture) */}
+      <mesh ref={glowRef} rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.015, 0]}>
+        <ringGeometry args={[r + 0.03, r + 0.1, 40]} />
+        <meshBasicMaterial
+          color={isCapturing ? '#FF4500' : '#FFD700'}
+          transparent
+          opacity={0}
+        />
+      </mesh>
 
-      {/* Cursor pointer area */}
-      {isClickable && (
-        <mesh position={[0, 0.15, 0]} visible={false}>
-          <cylinderGeometry args={[radius + 0.12, radius + 0.12, 0.3, 16]} />
-          <meshBasicMaterial />
-        </mesh>
-      )}
+      {/* Seeds sit inside the pit */}
+      <group position={[0, 0.02, 0]}>
+        <SeedCluster count={seeds} radius={r * 0.72} />
+      </group>
+
+      {/* Invisible larger click zone */}
+      <mesh visible={false}>
+        <cylinderGeometry args={[r + 0.15, r + 0.15, 0.3, 16]} />
+        <meshBasicMaterial />
+      </mesh>
     </group>
   );
 }

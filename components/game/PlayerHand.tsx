@@ -84,22 +84,23 @@ function HandModel({ color, glowColor, isGrabbing }: HandModelProps) {
   );
 }
 
+// Idle positions sit clearly outside the board (board front/back edge is z=±1.4)
 const IDLE_POS: Record<Player, THREE.Vector3> = {
-  1: new THREE.Vector3(0, 1.2, 1.1),
-  2: new THREE.Vector3(0, 1.2, -1.1),
+  1: new THREE.Vector3(0, 0.4, 2.6),
+  2: new THREE.Vector3(0, 0.4, -2.6),
 };
 
 export function PlayerHand({ player }: { player: Player }) {
   const ref = useRef<THREE.Group>(null);
   const { handPit, handPlayer, isHandGrabbing, phase, currentPlayer, mode } = useGameStore();
 
-  const isMyTurn = currentPlayer === player && phase === 'playing';
   const isAnimating = handPlayer === player && phase === 'animating';
-  const visible = isMyTurn || isAnimating;
+  // Always show hand during gameplay — idle when not your turn, active when it is
+  const visible = phase === 'playing' || phase === 'animating' || phase === 'gameover';
 
-  // Determine target world position
+  // Move to active pit only when it's this player animating; otherwise rest outside board
   const target = new THREE.Vector3();
-  if (handPlayer === player && handPit !== null) {
+  if (isAnimating && handPit !== null) {
     const [px, , pz] = PIT_POSITIONS[handPit];
     target.set(px, 0.75, pz);
   } else {

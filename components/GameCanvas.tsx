@@ -4,10 +4,13 @@ import { Suspense } from 'react';
 import { Scene3D } from './game/Scene3D';
 import { useGameStore } from '@/lib/gameStore';
 import { P1_STORE, P2_STORE } from '@/lib/gameLogic';
+import { useFullscreen } from '@/lib/useFullscreen';
+import { FullscreenButton } from './FullscreenButton';
 
 function HUD() {
   const { displayPits, currentPlayer, phase, winner, mode, goToMenu, startGame, handPlayer } =
     useGameStore();
+  const { isFullscreen, toggle: toggleFs, supported: fsSupported } = useFullscreen();
 
   const p1Score = displayPits[P1_STORE];
   const p2Score = displayPits[P2_STORE];
@@ -55,6 +58,15 @@ function HUD() {
       >
         ← MENU
       </button>
+
+      {/* ── Fullscreen button (top right) ── */}
+      {fsSupported && (
+        <FullscreenButton
+          isFullscreen={isFullscreen}
+          onToggle={toggleFs}
+          className="absolute top-2 right-2 pointer-events-auto"
+        />
+      )}
 
       {/* ── Game over overlay ── */}
       {phase === 'gameover' && (

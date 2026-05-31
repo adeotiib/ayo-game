@@ -1,8 +1,11 @@
 'use client';
 import { useGameStore } from '@/lib/gameStore';
+import { useFullscreen } from '@/lib/useFullscreen';
+import { FullscreenButton } from './FullscreenButton';
 
 export function Menu() {
   const { startGame } = useGameStore();
+  const { isFullscreen, toggle: toggleFs, supported: fsSupported } = useFullscreen();
 
   return (
     <div className="relative w-full h-full flex flex-col items-center justify-center bg-[#1A0800] overflow-hidden">
@@ -21,6 +24,15 @@ export function Menu() {
 
       {/* Glow */}
       <div className="absolute w-64 h-64 bg-amber-700/20 rounded-full blur-3xl pointer-events-none" />
+
+      {/* Fullscreen button */}
+      {fsSupported && (
+        <FullscreenButton
+          isFullscreen={isFullscreen}
+          onToggle={toggleFs}
+          className="absolute top-4 right-4"
+        />
+      )}
 
       {/* Title */}
       <div className="relative text-center mb-8 sm:mb-10 px-4">

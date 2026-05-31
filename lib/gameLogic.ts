@@ -7,8 +7,8 @@ export const P2_STORE = 13;
 export const TOTAL = 14;
 
 export const INITIAL_PITS: number[] = [
-  4, 4, 4, 4, 4, 4, 0,
-  4, 4, 4, 4, 4, 4, 0,
+  4, 4, 4, 4, 4, 4, 0,   // P1 pits 0-5, P1 store (index 6)
+  4, 4, 4, 4, 4, 4, 0,   // P2 pits 7-12, P2 store (index 13)
 ];
 
 // 3D world positions for each pit/store index — y=0.23 sits just above board top surface (y=0.22)
@@ -45,17 +45,16 @@ export function getValidMoves(pits: number[], player: Player) {
   return getPlayerPits(player).filter(i => pits[i] > 0);
 }
 
-function nextIndex(current: number, player: Player): number {
+// In Ayo/Oware, seeds are NEVER sown into stores — stores only receive captured seeds.
+function nextPit(current: number): number {
   let n = (current + 1) % TOTAL;
-  // skip opponent store
-  if (player === 1 && n === P2_STORE) n = 0;
-  if (player === 2 && n === P1_STORE) n = P1_STORE + 1;
+  // Skip both stores during sowing
+  if (n === P1_STORE || n === P2_STORE) n = (n + 1) % TOTAL;
   return n;
 }
 
 export interface MoveResult {
   newPits: number[];
-  extraTurn: boolean;
   sowingPath: number[];
 }
 
@@ -68,26 +67,37 @@ export function makeMove(pits: number[], pit: number, player: Player): MoveResul
   let cur = pit;
 
   while (seeds > 0) {
-    cur = nextIndex(cur, player);
+    cur = nextPit(cur);
+    // If seeds > 11 we'd lap the board; skip the starting pit on a full lap (Oware rule)
+    if (cur === pit) cur = nextPit(cur);
     newPits[cur]++;
     sowingPath.push(cur);
     seeds--;
   }
 
+  // Ayo capture: last seed lands in an OPPONENT pit that now has 2 or 3 seeds.
+  // Also capture all consecutive opponent pits backwards (against sowing direction) with 2 or 3.
+  const oppPits = player === 1 ? P2_PITS : P1_PITS;
   const store = getPlayerStore(player);
-  const extraTurn = cur === store;
 
-  // Capture: last seed in own empty pit (now has 1) with non-empty opposite
-  if (!extraTurn && getPlayerPits(player).includes(cur) && newPits[cur] === 1) {
-    const opp = 12 - cur; // works for pits 0-5 and 7-12
-    if (newPits[opp] > 0) {
-      newPits[store] += newPits[opp] + 1;
-      newPits[cur] = 0;
-      newPits[opp] = 0;
+  if (oppPits.includes(cur)) {
+    let idx = oppPits.indexOf(cur);
+    let captured = 0;
+    // Walk backwards through opponent pits (decreasing index = against sowing direction)
+    while (idx >= 0) {
+      const p = oppPits[idx];
+      if (newPits[p] === 2 || newPits[p] === 3) {
+        captured += newPits[p];
+        newPits[p] = 0;
+        idx--;
+      } else {
+        break;
+      }
     }
+    if (captured > 0) newPits[store] += captured;
   }
 
-  return { newPits, extraTurn, sowingPath };
+  return { newPits, sowingPath };
 }
 
 export interface GameOverResult {
@@ -102,6 +112,7 @@ export function checkGameOver(pits: number[]): GameOverResult {
 
   if (p1Has && p2Has) return { isOver: false, finalPits: pits, winner: null };
 
+  // One side is empty — remaining seeds go to the other player's store
   const fp = [...pits];
   if (!p1Has) {
     P2_PITS.forEach(i => { fp[P2_STORE] += fp[i]; fp[i] = 0; });

@@ -30,66 +30,64 @@ async function runAnimation(
 ) {
   const { pits, currentPlayer, mode } = get();
 
-  set({
-    phase: 'animating',
-    handPit: pitIndex,
-    handPlayer: currentPlayer,
-    isHandGrabbing: true,
-    capturedPits: [],
-  });
-  await sleep(450);
+  // Grab animation
+  set({ phase: 'animating', handPit: pitIndex, handPlayer: currentPlayer, isHandGrabbing: true, capturedPits: [] });
+  await sleep(420);
 
-  const { newPits, extraTurn, sowingPath } = makeMove(pits, pitIndex, currentPlayer);
+  const { newPits, sowingPath } = makeMove(pits, pitIndex, currentPlayer);
 
-  // Clear picked pit
+  // Clear picked pit visually
   const display = [...pits];
   display[pitIndex] = 0;
   set({ displayPits: display, isHandGrabbing: false });
 
-  // Animate sowing
+  // Animate sowing — one seed per pit
   let d = [...display];
   for (const target of sowingPath) {
-    await sleep(300);
+    await sleep(280);
     set({ handPit: target });
-    await sleep(180);
+    await sleep(160);
     d = [...d];
     d[target]++;
     set({ displayPits: [...d] });
   }
 
-  await sleep(350);
+  await sleep(320);
 
-  // Highlight captures
+  // Highlight captured pits (any pit that lost seeds)
   const capturedPits: number[] = [];
   for (let i = 0; i < INITIAL_PITS.length; i++) {
-    if (newPits[i] !== d[i]) capturedPits.push(i);
+    if (newPits[i] < d[i]) capturedPits.push(i);
   }
   if (capturedPits.length > 0) {
     set({ displayPits: newPits, capturedPits });
-    await sleep(600);
+    await sleep(700);
   }
 
+  // Check game over
   const { isOver, finalPits, winner } = checkGameOver(newPits);
   if (isOver) {
     set({ pits: finalPits, displayPits: finalPits, phase: 'gameover', winner, handPit: null, capturedPits: [] });
     return;
   }
 
-  if (extraTurn) {
-    set({ pits: newPits, displayPits: newPits, phase: 'playing', handPit: null, capturedPits: [] });
-    if (mode === 'ai' && currentPlayer === 2) {
-      await sleep(700);
-      const aiPit = getAIMove(newPits);
-      if (aiPit >= 0) runAnimation(aiPit, get, set);
-    }
-  } else {
-    const next: Player = currentPlayer === 1 ? 2 : 1;
-    set({ pits: newPits, displayPits: newPits, currentPlayer: next, phase: 'playing', handPit: null, handPlayer: next, capturedPits: [] });
-    if (mode === 'ai' && next === 2) {
-      await sleep(800);
-      const aiPit = getAIMove(newPits);
-      if (aiPit >= 0) runAnimation(aiPit, get, set);
-    }
+  // Switch to next player (no extra turns in Ayo)
+  const next: Player = currentPlayer === 1 ? 2 : 1;
+  set({
+    pits: newPits,
+    displayPits: newPits,
+    currentPlayer: next,
+    phase: 'playing',
+    handPit: null,
+    handPlayer: next,
+    capturedPits: [],
+  });
+
+  // AI turn
+  if (mode === 'ai' && next === 2) {
+    await sleep(800);
+    const aiPit = getAIMove(newPits);
+    if (aiPit >= 0) runAnimation(aiPit, get, set);
   }
 }
 

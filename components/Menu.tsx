@@ -1,11 +1,18 @@
 'use client';
 import { useGameStore } from '@/lib/gameStore';
-import { useFullscreen } from '@/lib/useFullscreen';
+import { useFullscreen, tryFullscreen, isTouchDevice } from '@/lib/useFullscreen';
 import { FullscreenButton } from './FullscreenButton';
+import { GameMode } from '@/types/game';
 
 export function Menu() {
   const { startGame } = useGameStore();
   const { isFullscreen, toggle: toggleFs, supported: fsSupported } = useFullscreen();
+
+  // On mobile, request fullscreen synchronously inside the tap gesture then start game
+  const handleStart = (mode: GameMode) => {
+    if (isTouchDevice()) tryFullscreen();
+    startGame(mode);
+  };
 
   return (
     <div className="relative w-full h-full flex flex-col items-center justify-center bg-[#1A0800] overflow-hidden">
@@ -57,7 +64,7 @@ export function Menu() {
       {/* Buttons — full-width on small screens */}
       <div className="relative flex flex-col gap-4 w-full max-w-xs px-6 sm:px-0 sm:w-64">
         <button
-          onClick={() => startGame('pvp')}
+          onClick={() => handleStart('pvp')}
           className="w-full min-h-[52px] py-4 px-6
             border-2 border-amber-600 rounded-full
             text-amber-300 font-bold tracking-widest text-sm
@@ -69,7 +76,7 @@ export function Menu() {
         </button>
 
         <button
-          onClick={() => startGame('ai')}
+          onClick={() => handleStart('ai')}
           className="w-full min-h-[52px] py-4 px-6
             bg-amber-600 border-2 border-amber-500 rounded-full
             text-white font-bold tracking-widest text-sm

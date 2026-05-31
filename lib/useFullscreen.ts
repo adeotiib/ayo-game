@@ -1,6 +1,18 @@
 'use client';
 import { useState, useEffect, useCallback } from 'react';
 
+/** Call synchronously from a user-gesture handler (click/tap). */
+export function tryFullscreen() {
+  const el = document.documentElement as any;
+  const active = document.fullscreenElement || (document as any).webkitFullscreenElement;
+  if (active) return;
+  try { el.requestFullscreen?.() ?? el.webkitRequestFullscreen?.(); } catch { /* ignore */ }
+}
+
+export function isTouchDevice() {
+  return typeof window !== 'undefined' && window.matchMedia('(pointer: coarse)').matches;
+}
+
 export function useFullscreen() {
   const [isFullscreen, setIsFullscreen] = useState(false);
 
